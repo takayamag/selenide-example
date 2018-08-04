@@ -1,0 +1,123 @@
+buildscript {
+    ext.kotlin_version        = '1.2.60'
+    ext.spek_version          = '1.1.5'
+    ext.selenium_version      = '3.14.0'
+    ext.selenide_version      = '4.12.3'
+    ext.junit_version         = '4.12'
+    ext.appium_java_client_version    = '6.1.0'
+    ext.junit_platform_runner_version = '1.2.0'
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'org.junit.platform:junit-platform-gradle-plugin:1.0.0'
+    }
+}
+
+group 'com.example'
+version '1.0-SNAPSHOT'
+
+// apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'org.junit.platform.gradle.plugin'
+
+junitPlatform {
+    reportsDir file("$buildDir/spek_reports")
+    filters {
+        engines {
+            include 'spek'
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url "http://dl.bintray.com/jetbrains/spek" }
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+
+    // https://mvnrepository.com/artifact/junit/junit
+    testCompile group: 'junit', name: 'junit', version: "$junit_version"
+
+    // http://selenide.org/
+    // https://mvnrepository.com/artifact/com.codeborne/selenide
+    // https://github.com/codeborne/selenide/blob/master/CHANGELOG
+    compile group: 'com.codeborne', name: 'selenide', version: "$selenide_version"
+
+    // http://www.seleniumhq.org/
+    // https://mvnrepository.com/artifact/org.seleniumhq.selenium/selenium-java
+    compile group: 'org.seleniumhq.selenium', name: 'selenium-java', version: "$selenium_version"
+
+    // https://mvnrepository.com/artifact/io.appium/java-client
+    compile group: 'io.appium', name: 'java-client', version: "$appium_java_client_version"
+
+    // https://mvnrepository.com/artifact/org.jetbrains.spek/spek-api
+    // http://spekframework.org/docs/latest/
+    testCompile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    testCompile ("org.jetbrains.spek:spek-api:$spek_version") {
+        exclude group: 'org.jetbrains.kotlin'
+    }
+    testRuntime ("org.jetbrains.spek:spek-junit-platform-engine:$spek_version") {
+        exclude group: 'org.junit.platform'
+        exclude group: 'org.jetbrains.kotlin'
+    }
+
+    // https://mvnrepository.com/artifact/org.junit.platform/junit-platform-runner
+    testCompile group: 'org.junit.platform', name: 'junit-platform-runner', version: "$junit_platform_runner_version"
+}
+
+// gradleの-Pオプションを使用して外部から引数を渡す設定
+junitPlatformTest {
+    systemProperties project.properties.subMap(
+            [
+                    "QA_PROXY",
+                    "TEST_BROWSER",
+                    "USE_HEADLESS",
+                    "GRID_HUB_URL",
+                    "USE_GRID_HUB",
+                    "CHROME_BINARY",
+                    "FIREFOX_BINARY",
+                    "TEST_DEVICE_NAME"
+            ]
+    )
+}
+
+test {
+    // https://docs.gradle.org/current/dsl/org.gradle.api.tasks.testing.logging.TestLoggingContainer.html
+    testLogging {
+        // showStandardStreams = true
+        // set options for log level LIFECYCLE
+        events "started", "passed", "skipped", "failed"
+
+        // exceptionFormat "short"
+        exceptionFormat "full"
+
+        // set options for log level DEBUG
+        /*
+        debug {
+            events "started", "skipped", "failed"
+            exceptionFormat "full"
+        }
+        */
+
+        // remove standard output/error logging from --info builds
+        info {
+            events = ["standard_out", "failed", "skipped"]
+        }
+    }
+    afterTest { desc, result ->
+        logger.quiet "Executing test ${desc.name} [${desc.className}] with result: ${result.resultType}"
+    }
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
